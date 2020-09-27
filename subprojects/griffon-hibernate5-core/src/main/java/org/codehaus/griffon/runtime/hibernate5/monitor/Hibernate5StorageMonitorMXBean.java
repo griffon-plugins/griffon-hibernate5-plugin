@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-dependencies {
-    api 'org.codehaus.griffon.plugins:griffon-datasource-core:3.0.0-SNAPSHOT'
+package org.codehaus.griffon.runtime.hibernate5.monitor;
 
-    api "org.hibernate:hibernate-core:$hibernateVersion"
-    api "org.hibernate:hibernate-entitymanager:$hibernateVersion"
+import org.codehaus.griffon.runtime.monitor.ObjectStorageMonitorMXBean;
 
-    testRuntimeOnly "com.h2database:h2:$h2Version"
-    testImplementation "org.hibernate:hibernate-c3p0:$hibernateVersion"
+/**
+ * @author Andres Almiray
+ * @since 1.2.0
+ */
+public interface Hibernate5StorageMonitorMXBean extends ObjectStorageMonitorMXBean {
 }
-
-compileGroovy.enabled = false

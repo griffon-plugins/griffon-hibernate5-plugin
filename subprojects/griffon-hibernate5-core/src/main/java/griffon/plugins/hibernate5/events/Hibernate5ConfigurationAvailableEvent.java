@@ -15,16 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package griffon.plugins.hibernate5;
+package griffon.plugins.hibernate5.events;
 
 import griffon.annotations.core.Nonnull;
-import org.hibernate.Session;
+import griffon.core.event.Event;
+
+import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * @author Andres Almiray
+ * @since 3.0.0
  */
-public interface Hibernate5Bootstrap {
-    void init(@Nonnull String sessionFactoryName, @Nonnull Session session);
+public class Hibernate5ConfigurationAvailableEvent extends Event {
+    private final Map<String, Object> config;
 
-    void destroy(@Nonnull String sessionFactoryName, @Nonnull Session session);
+    public Hibernate5ConfigurationAvailableEvent(@Nonnull Map<String, Object> config) {
+        this.config = requireNonNull(config, "Argument 'config' must not be null");
+    }
+
+    @Nonnull
+    public Map<String, Object> getConfig() {
+        return config;
+    }
+
+    @Nonnull
+    public static Hibernate5ConfigurationAvailableEvent of(@Nonnull Map<String, Object> config) {
+        return new Hibernate5ConfigurationAvailableEvent(config);
+    }
 }

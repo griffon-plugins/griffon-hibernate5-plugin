@@ -22,7 +22,7 @@ environment may connect to a different database.
 [source,groovy,options="nowrap"]
 .src/main/resources/Hibernate5.groovy
 ----
-include::{path_griffon_hibernate5_core}/src/test/resources/Hibernate5.groovy[lines=16..33]
+include::{path_griffon_hibernate5_core}/src/test/resources/Hibernate5.groovy[lines=18..35]
 ----
 
 You may configure multiple named SessionFactories (the default factory is aptly named `default`) as the following snippet
@@ -31,8 +31,7 @@ shows
 [source,groovy,options="nowrap"]
 .src/main/resources/Hibernate5.groovy
 ----
-include::{path_griffon_hibernate5_core}/src/test/resources/Hibernate5.groovy[lines=35..40]
-include::{path_griffon_hibernate5_core}/src/test/resources/Hibernate5.groovy[lines=42..-1]
+include::{path_griffon_hibernate5_core}/src/test/resources/Hibernate5.groovy[lines=37..-1]
 ----
 
 === Session Properties
@@ -131,7 +130,7 @@ with JDK8+ or closures if running Groovy.
 [source,java,options="nowrap"]
 .griffon.plugins.hibernate5.Hibernate5Callback.java
 ----
-include::{path_griffon_hibernate5_core}/src/main/java/griffon/plugins/hibernate5/Hibernate5Callback.java[lines=25..-1]
+include::{path_griffon_hibernate5_core}/src/main/java/griffon/plugins/hibernate5/Hibernate5Callback.java[lines=26..-1]
 ----
 
 === Mappings
@@ -143,7 +142,7 @@ For example:
 [source,groovy,options="nowrap"]
 .src/main/groovy/griffon/plugins/hibernate5/Person.groovy
 ----
-include::{path_griffon_hibernate5_core}/src/test/groovy/griffon/plugins/hibernate5/Person.groovy[lines=16..-1]
+include::{path_griffon_hibernate5_core}/src/test/groovy/griffon/plugins/hibernate5/Person.groovy[lines=18..-1]
 ----
 
 And matching XML file that contains query definitions, such as
@@ -152,14 +151,14 @@ And matching XML file that contains query definitions, such as
 [subs="verbatim,attributes"]
 .src/main/resources/griffon/plugins/hibernate5/Person.hbm.xml
 ----
-include::{path_griffon_hibernate5_core}/src/test/resources/griffon/plugins/hibernate5/Person.hbm.xml[lines=18..-1]
+include::{path_griffon_hibernate5_core}/src/test/resources/griffon/plugins/hibernate5/Person.hbm.xml[lines=20..-1]
 ----
 The other way is through class with annotations.
 For example:
 [source,groovy,options="nowrap"]
 .src/main/groovy/griffon/plugins/hibernate5/User.groovy
 ----
-include::{path_griffon_hibernate5_core}/src/test/groovy/griffon/plugins/hibernate5/User.groovy[lines=15..-1]
+include::{path_griffon_hibernate5_core}/src/test/groovy/griffon/plugins/hibernate5/User.groovy[lines=18..-1]
 ----
 
 === Bootstrap
@@ -175,7 +174,7 @@ package com.acme;
 import griffon.plugins.hibernate5.Hibernate5Bootstrap;
 import org.hibernate.Session;
 
-import javax.annotation.Nonnull;
+import griffon.annotations.core.Nonnull;
 import javax.inject.Named;
 
 @Named("sample")
@@ -223,17 +222,17 @@ The following is a trivial usage of the `{api_hibernate5_handler}` inside a Java
 package com.acme;
 
 import griffon.core.artifact.GriffonService;
-import griffon.metadata.ArtifactProviderFor;
 import org.codehaus.griffon.runtime.core.artifact.AbstractGriffonService;
 
 import griffon.plugins.hibernate5.Hibernate5Handler;
 import griffon.plugins.hibernate5.Hibernate5Callback;
 import org.hibernate.Session;
+import org.kordamp.jipsy.ServiceProviderFor;
 
-import javax.annotation.Nonnull;
+import griffon.annotations.core.Nonnull;
 import javax.inject.Inject;
 
-@ArtifactProviderFor(GriffonService.class)
+@ServiceProviderFor(GriffonService.class)
 public class SampleService extends AbstractGriffonService {
     @Inject
     private Hibernate5Handler hibernate5Handler;
@@ -256,14 +255,14 @@ Here's the Groovy version of it
 package com.acme
 
 import griffon.core.artifact.GriffonService
-import griffon.metadata.ArtifactProviderFor
 
 import griffon.plugins.hibernate5.Hibernate5Handler
 import org.hibernate.Session
+import org.kordamp.jipsy.ServiceProviderFor
 
 import javax.inject.Inject
 
-@ArtifactProviderFor(GriffonService)
+@ServiceProviderFor(GriffonService)
 class SampleService {
     @Inject
     private Hibernate5Handler hibernate5Handler
@@ -280,15 +279,15 @@ class SampleService {
 
 The following events will be triggered by `{api_hibernate5_handler}`
 
-Hibernate5ConnectStart(String sessionFactoryName, Map<String, Object> config):: Triggered before connecting to the datasource.
-Hibernate5ConfigurationAvailable(Map<String, Object> options):: Triggered after the session's configuration is ready. The map
+Hibernate5ConnectStartEvent(String sessionFactoryName, Map<String, Object> config):: Triggered before connecting to the datasource.
+Hibernate5ConfigurationAvailableEvent(Map<String, Object> options):: Triggered after the session's configuration is ready. The map
 contains the following keys:
   * configuration; type=org.hibernate.cfg.Configuration
   * dataSourceName; type=java.lang.String
   * sessionConfiguration; type=java.util.Map
-Hibernate5ConnectEnd(String sessionFactoryName, Map<String, Object> config, SessionFactory factory):: Triggered after connecting to the datasource.
-Hibernate5DisconnectStart(String sessionFactoryName, Map<String, Object> config, SessionFactory factory):: Triggered before disconnecting from the datasource.
-Hibernate5DisconnectEnd(String sessionFactoryName, Map<String, Object> config):: Triggered after disconnecting from the datasource.
+Hibernate5ConnectEndEvent(String sessionFactoryName, Map<String, Object> config, SessionFactory factory):: Triggered after connecting to the datasource.
+Hibernate5DisconnectStartEvent(String sessionFactoryName, Map<String, Object> config, SessionFactory factory):: Triggered before disconnecting from the datasource.
+Hibernate5DisconnectEndv(String sessionFactoryName, Map<String, Object> config):: Triggered after disconnecting from the datasource.
 
 NOTE: DataSource events may be triggered during connection and disconnection from a `{link_session_factory}`.
 
@@ -303,13 +302,13 @@ into said class. The previous Groovy service example can be rewritten as follows
 package com.acme
 
 import griffon.core.artifact.GriffonService
-import griffon.metadata.ArtifactProviderFor
-import griffon.transform.Hibernate5Aware
+import griffon.transform.hibernate5.Hibernate5Aware
 
 import org.hibernate.Session
+import org.kordamp.jipsy.ServiceProviderFor
 
 @Hibernate5Aware
-@ArtifactProviderFor(GriffonService)
+@ServiceProviderFor(GriffonService)
 class SampleService {
     String getPersonName(int id) {
          withHbm4Session { String sessionFactoryName, Session session ->

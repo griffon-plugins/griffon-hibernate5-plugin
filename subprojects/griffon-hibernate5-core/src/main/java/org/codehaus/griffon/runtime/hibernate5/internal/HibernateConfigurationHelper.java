@@ -1,11 +1,13 @@
 /*
- * Copyright 2014-2017 the original author or authors.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2014-2020 The author and/or original authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,13 +20,13 @@ package org.codehaus.griffon.runtime.hibernate5.internal;
 import griffon.core.GriffonApplication;
 import griffon.plugins.hibernate5.Hibernate5Mapping;
 import griffon.plugins.hibernate5.exceptions.RuntimeHibernate5Exception;
-import griffon.util.ServiceLoaderUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.Interceptor;
 import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
+import org.kordamp.jipsy.util.TypeLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +37,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
-import static griffon.util.ConfigUtils.*;
+import static griffon.util.ConfigUtils.getConfigValue;
+import static griffon.util.ConfigUtils.getConfigValueAsBoolean;
+import static griffon.util.ConfigUtils.getConfigValueAsString;
 import static griffon.util.GriffonNameUtils.isBlank;
 
 /**
@@ -56,13 +60,6 @@ public class HibernateConfigurationHelper {
     public static final String PROVIDER_CLASS = "provider_class";
     private static final Logger LOG = LoggerFactory.getLogger(HibernateConfigurationHelper.class);
     private static final String HBM_XML_SUFFIX = ".hbm.xml";
-
-    private final Map<String, Object> sessionConfig;
-    private final String dataSourceName;
-    private final DataSource dataSource;
-    private final GriffonApplication application;
-    private final Map<String, String> dataSourceConfiguration;
-
     private static Map<String, String> groovyToHibernateConfigurationName;
 
     static {
@@ -73,6 +70,12 @@ public class HibernateConfigurationHelper {
         groovyToHibernateConfigurationName.put("url", "hibernate.connection.url");
 
     }
+
+    private final Map<String, Object> sessionConfig;
+    private final String dataSourceName;
+    private final DataSource dataSource;
+    private final GriffonApplication application;
+    private final Map<String, String> dataSourceConfiguration;
 
     public HibernateConfigurationHelper(GriffonApplication application, Map<String, Object> sessionConfig, String dataSourceName, DataSource dataSource, Map dataSources) {
         this.application = application;
@@ -106,7 +109,7 @@ public class HibernateConfigurationHelper {
 
     private void applyProviderClassToHibernate(Configuration config) {
         String providerClass = getConfigValueAsString(sessionConfig, PROVIDER_CLASS, null);
-        if (providerClass!=null) {
+        if (providerClass != null) {
             config.setProperty("hibernate.connection.provider_class", providerClass);
             // Copying all connection configuration from data source to hibernate
             for (Map.Entry<String, String> keyValueConfiguration : dataSourceConfiguration.entrySet()) {
@@ -215,7 +218,7 @@ public class HibernateConfigurationHelper {
 
     private void applyMappings(final Configuration config) {
         final Object mapClasses = getConfigValue(sessionConfig, MAP_CLASSES_PATTERN, Pattern.compile(".*"));
-        ServiceLoaderUtils.load(application.getApplicationClassLoader().get(), "META-INF/types", Hibernate5Mapping.class, new ServiceLoaderUtils.LineProcessor() {
+        TypeLoader.load(application.getApplicationClassLoader().get(), "META-INF/types", Hibernate5Mapping.class, new TypeLoader.LineProcessor() {
             @Override
             public void process(ClassLoader classLoader, Class<?> type, String line) {
                 String originalName = line.trim();

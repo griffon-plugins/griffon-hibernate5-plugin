@@ -1,11 +1,13 @@
 /*
- * Copyright 2014-2017 the original author or authors.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2014-2020 The author and/or original authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,7 +32,7 @@ class Hibernate5AwareASTTransformationSpec extends Specification {
 
         when:
         def bean = shell.evaluate('''
-        @griffon.transform.Hibernate5Aware
+        @griffon.transform.hibernate5.Hibernate5Aware
         class Bean { }
         new Bean()
         ''')
@@ -40,9 +42,9 @@ class Hibernate5AwareASTTransformationSpec extends Specification {
         Hibernate5Handler.methods.every { Method target ->
             bean.class.declaredMethods.find { Method candidate ->
                 candidate.name == target.name &&
-                candidate.returnType == target.returnType &&
-                candidate.parameterTypes == target.parameterTypes &&
-                candidate.exceptionTypes == target.exceptionTypes
+                    candidate.returnType == target.returnType &&
+                    candidate.parameterTypes == target.parameterTypes &&
+                    candidate.exceptionTypes == target.exceptionTypes
             }
         }
     }
@@ -57,15 +59,16 @@ class Hibernate5AwareASTTransformationSpec extends Specification {
         import griffon.plugins.hibernate5.exceptions.RuntimeHibernate5Exception
         import griffon.plugins.hibernate5.Hibernate5Handler
 
-        import javax.annotation.Nonnull
-        @griffon.transform.Hibernate5Aware
+        import griffon.annotations.core.Nonnull
+
+        @griffon.transform.hibernate5.Hibernate5Aware
         class Hibernate5HandlerBean implements Hibernate5Handler {
             @Override
-            public <R> R withHbm5Session(@Nonnull Hibernate5Callback<R> callback) throws RuntimeHibernate5Exception {
+             <R> R withHbm5Session(@Nonnull Hibernate5Callback<R> callback) throws RuntimeHibernate5Exception {
                 return null
             }
             @Override
-            public <R> R withHbm5Session(@Nonnull String sessionFactoryName, @Nonnull Hibernate5Callback<R> callback) throws RuntimeHibernate5Exception {
+             <R> R withHbm5Session(@Nonnull String sessionFactoryName, @Nonnull Hibernate5Callback<R> callback) throws RuntimeHibernate5Exception {
                 return null
             }
             @Override

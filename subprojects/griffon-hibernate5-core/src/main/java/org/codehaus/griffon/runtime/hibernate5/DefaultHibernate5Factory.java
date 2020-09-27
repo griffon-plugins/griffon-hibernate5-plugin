@@ -1,11 +1,13 @@
 /*
- * Copyright 2014-2017 the original author or authors.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2014-2020 The author and/or original authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +17,7 @@
  */
 package org.codehaus.griffon.runtime.hibernate5;
 
+import griffon.annotations.core.Nonnull;
 import griffon.core.GriffonApplication;
 import griffon.core.env.Metadata;
 import griffon.core.injection.Injector;
@@ -22,17 +25,21 @@ import griffon.plugins.datasource.DataSourceFactory;
 import griffon.plugins.datasource.DataSourceStorage;
 import griffon.plugins.hibernate5.Hibernate5Bootstrap;
 import griffon.plugins.hibernate5.Hibernate5Factory;
+import griffon.plugins.hibernate5.events.Hibernate5ConfigurationAvailableEvent;
+import griffon.plugins.hibernate5.events.Hibernate5ConnectEndEvent;
+import griffon.plugins.hibernate5.events.Hibernate5ConnectStartEvent;
+import griffon.plugins.hibernate5.events.Hibernate5DisconnectEndEvent;
+import griffon.plugins.hibernate5.events.Hibernate5DisconnectStartEvent;
 import griffon.plugins.monitor.MBeanManager;
 import griffon.util.CollectionUtils;
 import org.codehaus.griffon.runtime.core.storage.AbstractObjectFactory;
 import org.codehaus.griffon.runtime.datasource.DefaultDataSourceFactory;
 import org.codehaus.griffon.runtime.hibernate5.internal.HibernateConfigurationHelper;
-import org.codehaus.griffon.runtime.jmx.SessionFactoryMonitor;
+import org.codehaus.griffon.runtime.hibernate5.monitor.SessionFactoryMonitor;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.sql.DataSource;
@@ -44,7 +51,6 @@ import java.util.Set;
 import static griffon.util.ConfigUtils.getConfigValue;
 import static griffon.util.ConfigUtils.getConfigValueAsBoolean;
 import static griffon.util.GriffonNameUtils.requireNonBlank;
-import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -62,7 +68,7 @@ public class DefaultHibernate5Factory extends AbstractObjectFactory<SessionFacto
 
     @Inject
     private Injector injector;
-    
+
     @Inject
     private MBeanManager mBeanManager;
 
@@ -75,7 +81,7 @@ public class DefaultHibernate5Factory extends AbstractObjectFactory<SessionFacto
         sessionFactoryNames.add(KEY_DEFAULT);
 
         if (configuration.containsKey(getPluralKey())) {
-            Map<String, Object> sessionFactories = (Map<String, Object>) configuration.get(getPluralKey());
+            Map<String, Object> sessionFactories = configuration.get(getPluralKey());
             sessionFactoryNames.addAll(sessionFactories.keySet());
         }
     }
@@ -109,7 +115,7 @@ public class DefaultHibernate5Factory extends AbstractObjectFactory<SessionFacto
     @Override
     public SessionFactory create(@Nonnull String name) {
         Map<String, Object> config = narrowConfig(name);
-        event("Hibernate5ConnectStart", asList(name, config));
+        event(Hibernate5ConnectStartEvent.of(name, config));
 
         Configuration configuration = createConfiguration(config, name);
         createSchema(name, config, configuration);
@@ -134,7 +140,7 @@ public class DefaultHibernate5Factory extends AbstractObjectFactory<SessionFacto
             }
         }
 
-        event("Hibernate5ConnectEnd", asList(name, config, sessionFactory));
+        event(Hibernate5ConnectEndEvent.of(name, config, sessionFactory));
         return sessionFactory;
     }
 
@@ -142,7 +148,7 @@ public class DefaultHibernate5Factory extends AbstractObjectFactory<SessionFacto
     public void destroy(@Nonnull String name, @Nonnull SessionFactory instance) {
         requireNonNull(instance, "Argument 'instance' must not be null");
         Map<String, Object> config = narrowConfig(name);
-        event("Hibernate5DisconnectStart", asList(name, config, instance));
+        event(Hibernate5DisconnectStartEvent.of(name, config, instance));
 
         Session session = null;
         try {
@@ -159,16 +165,23 @@ public class DefaultHibernate5Factory extends AbstractObjectFactory<SessionFacto
         closeDataSource(name);
 
         if (getConfigValueAsBoolean(config, "jmx", true)) {
-            ((JMXAwareSessionFactory) instance).disposeMBeans();
+            unregisterMBeans((JMXAwareSessionFactory) instance);
         }
 
-        event("Hibernate5DisconnectEnd", asList(name, config));
+        event(Hibernate5DisconnectEndEvent.of(name, config));
     }
 
     private void registerMBeans(@Nonnull String name, @Nonnull JMXAwareSessionFactory sessionFactory) {
         RecordingSessionFactory recordingSessionFactory = (RecordingSessionFactory) sessionFactory.getDelegate();
         SessionFactoryMonitor sessionFactoryMonitor = new SessionFactoryMonitor(metadata, recordingSessionFactory, name);
         sessionFactory.addObjectName(mBeanManager.registerMBean(sessionFactoryMonitor, false).getCanonicalName());
+    }
+
+    private void unregisterMBeans(@Nonnull JMXAwareSessionFactory sessionFactory) {
+        for (String objectName : sessionFactory.getObjectNames()) {
+            mBeanManager.unregisterMBean(objectName);
+        }
+        sessionFactory.clearObjectNames();
     }
 
     @Nonnull
@@ -178,18 +191,17 @@ public class DefaultHibernate5Factory extends AbstractObjectFactory<SessionFacto
         griffon.core.Configuration dataSourcesConfiguration = ((DefaultDataSourceFactory) dataSourceFactory).getConfiguration();
         Map<String, Object> configurationMap = null;
         if (dataSourcesConfiguration.containsKey("dataSources"))
-            configurationMap = (Map<String, Object>) dataSourcesConfiguration.get("dataSources");
+            configurationMap = dataSourcesConfiguration.get("dataSources");
         if (configurationMap == null)
             configurationMap = new HashMap<>();
         configurationMap.put("default", dataSourcesConfiguration.get("dataSource"));
 
         HibernateConfigurationHelper configHelper = new HibernateConfigurationHelper(getApplication(), config, dataSourceName, dataSource, configurationMap);
         Configuration configuration = configHelper.buildConfiguration();
-        getApplication().getEventRouter().publishEvent("Hibernate5ConfigurationAvailable",
-            asList(CollectionUtils.map()
-                .e("configuration", configuration)
-                .e("dataSourceName", dataSourceName)
-                .e("sessionConfiguration", config)));
+        getApplication().getEventRouter().publishEvent(Hibernate5ConfigurationAvailableEvent.of(CollectionUtils.<String, Object>map()
+            .e("configuration", configuration)
+            .e("dataSourceName", dataSourceName)
+            .e("sessionConfiguration", config)));
         return configuration;
     }
 
